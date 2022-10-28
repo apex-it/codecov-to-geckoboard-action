@@ -1,0 +1,15 @@
+name: 'Codecov to Geckoboard'
+description: 'Uploads current Codecov coverage to a Geckoboard Dataset'
+inputs:
+  codecov-token:
+    description: 'API Token for Codecov'
+    required: true
+  geckoboard-token:
+    description: 'API Token for Codecov'
+    required: true
+outputs:
+  coverage:
+    description: 'Current coverage'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
