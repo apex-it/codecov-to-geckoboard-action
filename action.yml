@@ -5,11 +5,11 @@ inputs:
     description: 'API Token for Codecov'
     required: true
   geckoboard-token:
-    description: 'API Token for Codecov'
+    description: 'API Key/Token for Geckoboard'
     required: true
 outputs:
   coverage:
     description: 'Current coverage'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'

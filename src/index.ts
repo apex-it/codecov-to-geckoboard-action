@@ -1,9 +1,33 @@
 import * as core from '@actions/core';
-import axios from 'axios';
-import {camelCase} from 'lodash';
+import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
+import {config} from 'dotenv';
+import {camelCase} from 'lodash-es';
+import {CodecovRepoDetails, CodecovService} from './types.js';
 
-const getCodecovUrl = (repo: string, token: string): string =>
-  `https://codecov.io/api/gh/${repo}?access_token=${token}`;
+if (process.env['DOTENV_CONFIG_PATH']) {
+  config({path: process.env['DOTENV_CONFIG_PATH']});
+} else {
+  config();
+}
+
+const getRepoDetailsFromCodecov = async (
+  service: CodecovService,
+  owner: string,
+  repo: string,
+  token: string
+): Promise<AxiosResponse<CodecovRepoDetails>> => {
+  const options: AxiosRequestConfig = {
+    method: 'GET',
+    url: `https://api.codecov.io/api/v2/${service}/${owner}/repos/${repo}/`,
+    headers: {
+      accept: 'application/json',
+      authorization: `Bearer ${token}`
+    },
+    responseType: 'json'
+  };
+
+  return axios.request<CodecovRepoDetails>(options);
+};
 
 const getGeckoboardDatasetUrl = (repo: string): string =>
   `https://api.geckoboard.com/datasets/${camelCase(repo).toLowerCase()}.by_day`;
@@ -35,25 +59,22 @@ const createGeckoboardDatasetData = (coverage: number | string): object => ({
   ]
 });
 
-type CodecovResponse = {
-  commit: {
-    totals: {
-      c: number;
-    };
-  };
-};
-
 const run = async () => {
   try {
-    const githubRepo = process.env.GITHUB_REPOSITORY;
+    const githubRepo = process.env['GITHUB_REPOSITORY'];
+    const githubOwner = process.env['GITHUB_REPOSITORY_OWNER'];
 
     const codecovToken =
-      core.getInput('codecov-token') || process.env.CODECOV_TOKEN;
+      core.getInput('codecov-token') || process.env['CODECOV_TOKEN'];
     const geckoboardToken =
-      core.getInput('geckoboard-token') || process.env.GECKOBOARD_TOKEN;
+      core.getInput('geckoboard-token') || process.env['GECKOBOARD_TOKEN'];
 
     if (!githubRepo) {
       throw new Error('Failed to get GITHUB_REPOSITORY from environment');
+    }
+
+    if (!githubOwner) {
+      throw new Error('Failed to get GITHUB_REPOSITORY_OWNER from environment');
     }
 
     if (!codecovToken) {
@@ -64,12 +85,28 @@ const run = async () => {
       throw new Error('Failed to get input "geckoboard-token"');
     }
 
-    const codecovUrl = getCodecovUrl(githubRepo, codecovToken);
-    const codecovResponse = await axios.get<CodecovResponse>(codecovUrl);
+    let codecovResponse: AxiosResponse<CodecovRepoDetails>;
 
-    const currentCoverage = codecovResponse.data?.commit?.totals?.c;
+    try {
+      codecovResponse = await getRepoDetailsFromCodecov(
+        'github',
+        githubOwner,
+        githubRepo,
+        codecovToken
+      );
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        const message = `Error from Codecov: ${err.code} - ${err.message}`;
 
-    if (!currentCoverage) {
+        throw new Error(message);
+      }
+
+      throw new Error('Unknown error while getting data from Codecov');
+    }
+
+    const currentCoverage = codecovResponse.data.totals.coverage;
+
+    if (typeof currentCoverage != 'number') {
       throw new Error('Failed to get current from Codecov');
     }
 
