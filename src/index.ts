@@ -64,6 +64,8 @@ const run = async () => {
     const githubRepo = process.env['GITHUB_REPOSITORY'];
     const githubOwner = process.env['GITHUB_REPOSITORY_OWNER'];
 
+    console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
+
     const codecovToken =
       core.getInput('codecov-token') || process.env['CODECOV_TOKEN'];
     const geckoboardToken =
@@ -84,6 +86,8 @@ const run = async () => {
     if (!geckoboardToken) {
       throw new Error('Failed to get input "geckoboard-token"');
     }
+
+    console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
 
     let codecovResponse: AxiosResponse<CodecovRepoDetails>;
 
@@ -110,6 +114,12 @@ const run = async () => {
       throw new Error('Failed to get current from Codecov');
     }
 
+    console.log(`Current coverage is ${currentCoverage}`);
+
+    console.log(
+      `Creating dataset in Geckoboard: getGeckoboardDatasetUrl(githubRepo)`
+    );
+
     await axios.put(
       getGeckoboardDatasetUrl(githubRepo),
       createGeckoboardDataset(),
@@ -120,6 +130,8 @@ const run = async () => {
         }
       }
     );
+
+    console.log('Updating dataset in Geckoboard');
 
     await axios.post(
       getGeckoboardDatasetDataUrl(githubRepo),
