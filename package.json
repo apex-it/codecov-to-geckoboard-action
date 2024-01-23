@@ -17,7 +17,7 @@
     "lodash-es": "^4.17.21"
   },
   "name": "codecov-to-geckoboard-action",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Opinionated and simple transfer of coverage from Codecov to Geckoboard.",
   "main": "dist/index.js",
   "type": "module",

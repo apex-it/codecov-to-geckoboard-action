@@ -35973,14 +35973,14 @@ const createGeckoboardDatasetData = (coverage) => ({
         }
     ]
 });
+const repoWithoutOwner = (repoWithOwner, owner) => repoWithOwner.replace(`${owner}/`, '');
 const run = async () => {
     try {
-        const githubRepo = process.env['GITHUB_REPOSITORY'];
         const githubOwner = process.env['GITHUB_REPOSITORY_OWNER'];
-        console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
+        const githubRepoWithOwner = process.env['GITHUB_REPOSITORY'];
         const codecovToken = core.getInput('codecov-token') || process.env['CODECOV_TOKEN'];
         const geckoboardToken = core.getInput('geckoboard-token') || process.env['GECKOBOARD_TOKEN'];
-        if (!githubRepo) {
+        if (!githubRepoWithOwner) {
             throw new Error('Failed to get GITHUB_REPOSITORY from environment');
         }
         if (!githubOwner) {
@@ -35992,10 +35992,10 @@ const run = async () => {
         if (!geckoboardToken) {
             throw new Error('Failed to get input "geckoboard-token"');
         }
-        console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
+        console.log(`Fetching coverage for ${githubRepoWithOwner} from Codecov`);
         let codecovResponse;
         try {
-            codecovResponse = await getRepoDetailsFromCodecov('github', githubOwner, githubRepo, codecovToken);
+            codecovResponse = await getRepoDetailsFromCodecov('github', githubOwner, repoWithoutOwner(githubRepoWithOwner, githubOwner), codecovToken);
         }
         catch (err) {
             if (err instanceof axios_AxiosError) {
@@ -36009,15 +36009,15 @@ const run = async () => {
             throw new Error('Failed to get current from Codecov');
         }
         console.log(`Current coverage is ${currentCoverage}`);
-        console.log(`Creating dataset in Geckoboard: getGeckoboardDatasetUrl(githubRepo)`);
-        await lib_axios.put(getGeckoboardDatasetUrl(githubRepo), createGeckoboardDataset(), {
+        console.log(`Creating dataset in Geckoboard: ${getGeckoboardDatasetUrl(githubRepoWithOwner)}`);
+        await lib_axios.put(getGeckoboardDatasetUrl(githubRepoWithOwner), createGeckoboardDataset(), {
             auth: {
                 username: geckoboardToken,
                 password: ''
             }
         });
         console.log('Updating dataset in Geckoboard');
-        await lib_axios.post(getGeckoboardDatasetDataUrl(githubRepo), createGeckoboardDatasetData(currentCoverage), {
+        await lib_axios.post(getGeckoboardDatasetDataUrl(githubRepoWithOwner), createGeckoboardDatasetData(currentCoverage), {
             auth: {
                 username: geckoboardToken,
                 password: ''

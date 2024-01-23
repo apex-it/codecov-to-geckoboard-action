@@ -59,19 +59,20 @@ const createGeckoboardDatasetData = (coverage: number | string): object => ({
   ]
 });
 
+const repoWithoutOwner = (repoWithOwner: string, owner: string): string =>
+  repoWithOwner.replace(`${owner}/`, '');
+
 const run = async () => {
   try {
-    const githubRepo = process.env['GITHUB_REPOSITORY'];
     const githubOwner = process.env['GITHUB_REPOSITORY_OWNER'];
-
-    console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
+    const githubRepoWithOwner = process.env['GITHUB_REPOSITORY'];
 
     const codecovToken =
       core.getInput('codecov-token') || process.env['CODECOV_TOKEN'];
     const geckoboardToken =
       core.getInput('geckoboard-token') || process.env['GECKOBOARD_TOKEN'];
 
-    if (!githubRepo) {
+    if (!githubRepoWithOwner) {
       throw new Error('Failed to get GITHUB_REPOSITORY from environment');
     }
 
@@ -87,7 +88,7 @@ const run = async () => {
       throw new Error('Failed to get input "geckoboard-token"');
     }
 
-    console.log(`Fetching coverage for ${githubOwner}/${githubRepo}`);
+    console.log(`Fetching coverage for ${githubRepoWithOwner} from Codecov`);
 
     let codecovResponse: AxiosResponse<CodecovRepoDetails>;
 
@@ -95,7 +96,7 @@ const run = async () => {
       codecovResponse = await getRepoDetailsFromCodecov(
         'github',
         githubOwner,
-        githubRepo,
+        repoWithoutOwner(githubRepoWithOwner, githubOwner),
         codecovToken
       );
     } catch (err) {
@@ -117,11 +118,11 @@ const run = async () => {
     console.log(`Current coverage is ${currentCoverage}`);
 
     console.log(
-      `Creating dataset in Geckoboard: getGeckoboardDatasetUrl(githubRepo)`
+      `Creating dataset in Geckoboard: ${getGeckoboardDatasetUrl(githubRepoWithOwner)}`
     );
 
     await axios.put(
-      getGeckoboardDatasetUrl(githubRepo),
+      getGeckoboardDatasetUrl(githubRepoWithOwner),
       createGeckoboardDataset(),
       {
         auth: {
@@ -134,7 +135,7 @@ const run = async () => {
     console.log('Updating dataset in Geckoboard');
 
     await axios.post(
-      getGeckoboardDatasetDataUrl(githubRepo),
+      getGeckoboardDatasetDataUrl(githubRepoWithOwner),
       createGeckoboardDatasetData(currentCoverage),
       {
         auth: {
